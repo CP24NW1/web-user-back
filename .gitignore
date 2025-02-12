@@ -1,0 +1,44 @@
+# Node modules
+node_modules/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Dependency directories
+jspm_packages/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Environment variable files
+.env.test
+.env.local
+
+# Test coverage directory
+coverage/
+
+# Build output
+/dist
+/build
+
+# IDE/editor directories
+.vscode/
+.idea/
+
+# npm package lock files (optional, if you want to ignore them)
+package-lock.json
+yarn.lock
+
+# Temporary files
+*.log
+*.tmp
+*.swp
+
+# Optional, ignore test results or coverage reports
+*.test.js
+*.test.ts
+*.spec.js
+*.spec.ts
