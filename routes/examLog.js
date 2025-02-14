@@ -3,7 +3,7 @@ import {
   generateRandomExam,
   getAllExamLogID,
   getQuestionDetailByExamIDAndQuestionID,
-  getQuestionIDByExamLogID,
+  updateSelectOption,
 } from "../controllers/examlog.js";
 
 const router = express.Router();
@@ -11,7 +11,7 @@ const router = express.Router();
 // SKILL
 router.post("/random", generateRandomExam);
 router.get("/examID", getAllExamLogID);
-router.post("/questionID", getQuestionIDByExamLogID);
 router.post("/question", getQuestionDetailByExamIDAndQuestionID);
+router.put("/select", updateSelectOption);
 
 export default router;

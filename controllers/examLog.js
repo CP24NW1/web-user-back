@@ -1,9 +1,14 @@
 import Joi from "joi";
 import { pool } from "../db.js";
 import {
+  createExamByRandomQuery,
   getAllExamLogIDQuery,
+  getMaxExamIDQuery,
+  getOptionRangeQuery,
   getQuestionDetailByExamLogIDAndQuestionIDQuery,
   getQuestionIDByExamLogIDQuery,
+  getQuestionsRandomQuery,
+  updateSelectOptionQuery,
 } from "../queries/examLogQueries.js";
 
 //-------------------
@@ -29,15 +34,11 @@ export const generateRandomExam = async (req, res) => {
   // }
 
   try {
-    const [rows] = await pool.query(
-      "SELECT MAX(exam_id) AS max_exam_id FROM examtesting"
-    );
+    const [rows] = await pool.query(getMaxExamIDQuery);
 
     const exam_id = (rows[0]?.max_exam_id || 0) + 1;
 
-    const [questions] = await pool.query(
-      "SELECT question_id FROM question WHERE is_available = TRUE ORDER BY RAND() LIMIT 20"
-    );
+    const [questions] = await pool.query(getQuestionsRandomQuery);
 
     if (questions.length === 0) {
       throw new Error("No question available");
@@ -52,10 +53,7 @@ export const generateRandomExam = async (req, res) => {
       false,
     ]);
 
-    await pool.query(
-      "INSERT INTO examtesting (exam_id, question_id, user_id, attempt_at, time_taken, is_correct) VALUES ?",
-      [examEntries]
-    );
+    await pool.query(createExamByRandomQuery, [examEntries]);
 
     res.status(201).json({
       success: true,
@@ -97,8 +95,8 @@ export const getAllExamLogID = async (req, res) => {
 
 export const getQuestionDetailByExamIDAndQuestionID = async (req, res) => {
   const schema = Joi.object({
-    exam_id: Joi.number().integer().positive().required().min(0),
-    index: Joi.number().integer().positive().required().min(0),
+    exam_id: Joi.number().integer().positive().required(),
+    index: Joi.number().integer().positive().required(),
   });
 
   // Validate
@@ -158,4 +156,76 @@ export const getQuestionDetailByExamIDAndQuestionID = async (req, res) => {
     console.log(error);
     res.status(500).json({ error: error.message });
   }
+};
+
+//-------------------
+// USER SELECT OPTION
+//-------------------
+
+export const updateSelectOption = async (req, res) => {
+  try {
+    const [option] = await pool.query(getOptionRangeQuery, [
+      req.body.question_id,
+    ]);
+
+    const range = option.map((o) => o.option_id);
+
+    let min = range[0];
+    let max = range[range.length - 1];
+
+    const schema = Joi.object({
+      exam_id: Joi.number().integer().positive().required(),
+      question_id: Joi.number().integer().positive().required(),
+      option_id: Joi.number()
+        .integer()
+        .positive()
+        .min(min)
+        .max(max)
+        .required()
+        .messages({
+          "number.min": `option_id must be between ${min} - ${max}`,
+          "number.max": `option_id must be between ${min} - ${max}`,
+        }),
+    });
+
+    // Validate
+    const { error, value } = schema.validate(req.body, { abortEarly: false });
+
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        error: "Validation Error",
+        details: error.details.map((err) => err.message),
+      });
+    }
+
+    //prettier-ignore
+    const { exam_id, question_id, option_id } = value;
+
+    const [result] = await pool.query(updateSelectOptionQuery, [
+      option_id,
+      exam_id,
+      question_id,
+    ]);
+
+    res.status(200).json({
+      success: true,
+      message: "Option saved",
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+//-------------------
+// CHECK ANSWER
+//-------------------
+
+//must answer all question
+//update is_correct
+//get summary
+
+export const checkAnswer = async (req, res) => {
+  const { exam_id } = req.body;
 };
