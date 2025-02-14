@@ -16,7 +16,7 @@ app.use(bodyParse.json({ limit: "10mb" }));
 
 app.listen(5005, () => console.log("Web User Server is running on port 5005"));
 
-app.use("/api/exam/random", examRouter);
+app.use("/api/exam", examRouter);
 
 app.use("/api/check", (req, res) => {
   return res.status(200).json({ message: "ok!" });

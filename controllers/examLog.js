@@ -1,19 +1,23 @@
 import { pool } from "../db.js";
+import {
+  getAllExamLogIDQuery,
+  getQuestionDetailByExamLogIDAndQuestionIDQuery,
+  getQuestionIDByExamLogIDQuery,
+} from "../queries/examLogQueries.js";
+
 //-------------------
-// GET ALL SKILL
+// CREATE EXAM RANDOMLY
 //-------------------
 
-// ฟังก์ชันสุ่ม 20 question_id และ insert ลง examtesting
 export const generateRandomExam = async (req, res) => {
   const { user_id } = req.body;
   try {
-    // ดึงค่า exam_id ล่าสุดจากระบบ แล้วเพิ่มค่า +1
     const [rows] = await pool.query(
       "SELECT MAX(exam_id) AS max_exam_id FROM examtesting"
     );
-    const exam_id = (rows[0]?.max_exam_id || 0) + 1; // ถ้ายังไม่มีข้อมูลในตาราง ให้เริ่มที่ 1
 
-    // ดึง 20 question_id ที่ is_available = TRUE
+    const exam_id = (rows[0]?.max_exam_id || 0) + 1;
+
     const [questions] = await pool.query(
       "SELECT question_id FROM question WHERE is_available = TRUE ORDER BY RAND() LIMIT 20"
     );
@@ -36,55 +40,96 @@ export const generateRandomExam = async (req, res) => {
       [examEntries]
     );
 
-    const [result] = await pool.query(
-      `SELECT e.exam_question_id, e.exam_id, e.question_id, e.user_id, e.create_at, e.attempt_at, e.time_taken, e.is_correct as answer_correct, s.skill_id, s.skill_name, q.image_id, q.question_text, opt.option_id, opt.option_text, opt.is_correct
-       FROM examtesting e 
-       JOIN question q ON e.question_id = q.question_id 
-       JOIN choiceoption opt ON opt.question_id = q.question_id 
-       JOIN skill s ON s.skill_id = q.skill_id
-       WHERE e.exam_id = ?`,
-      [exam_id]
-    );
-
-    const responseResult = [
-      ...result
-        .reduce((map, item) => {
-          const q = map.get(item.exam_question_id) || {
-            exam_question_id: item.exam_question_id,
-            exam_id: item.exam_id,
-            user_id: item.user_id,
-            create_at: item.create_at,
-            attempt_at: item.attempt_at,
-            time_taken: item.time_taken,
-            question_id: item.question_id,
-            skill_id: item.skill_id,
-            skill_name: item.skill_name,
-            image_id: item.image_id,
-            answer_correct: item.answer_correct,
-            question_text: item.question_text,
-            options: [],
-          };
-
-          q.options.push({
-            option_id: item.option_id,
-            option_text: item.option_text,
-            is_correct: item.is_correct,
-          });
-
-          return map.set(item.exam_question_id, q);
-        }, new Map())
-        .values(),
-    ];
-
     res.status(201).json({
       success: true,
       message: "Exam created success randomly",
       exam_id: exam_id,
       timestamp: new Date().toISOString(),
-      exam: responseResult,
     });
   } catch (error) {
     console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+//-------------------
+// GET EXAM BY ID
+//-------------------
+
+export const getAllExamLogID = async (req, res) => {
+  try {
+    const [result] = await pool.query(getAllExamLogIDQuery);
+
+    if (result.length < 1) {
+      res.status(400).json({
+        error: "No exam on the database",
+      });
+    }
+    res.status(200).json({
+      exams: result,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+//-------------------
+// GET EXAM BY ID
+//-------------------
+
+export const getQuestionIDByExamLogID = async (req, res) => {
+  const { exam_id } = req.body;
+  try {
+    const [result] = await pool.query(getQuestionIDByExamLogIDQuery, [exam_id]);
+
+    if (result.length < 1) {
+      return res.status(404).json({
+        error: "exam_id not found on the database",
+      });
+    }
+    const questionIDs = result.map((r) => r.question_id);
+
+    res.json({
+      question_id: questionIDs,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+//-------------------
+// GET QUESTION DETAIL
+//-------------------
+
+export const getQuestionDetailByExamIDAndQuestionID = async (req, res) => {
+  const { exam_id, question_id } = req.body;
+
+  try {
+    const [result] = await pool.query(
+      getQuestionDetailByExamLogIDAndQuestionIDQuery,
+      [exam_id, question_id]
+    );
+
+    const formatResult = result.reduce(
+      (acc, { option_id, option_text, is_correct, ...rest }) => {
+        acc[rest.question_id] ??= { ...rest, options: [] };
+        acc[rest.question_id].options.push({
+          option_id,
+          option_text,
+          is_correct,
+        });
+        return acc;
+      },
+      {}
+    );
+
+    res.status(200).json({
+      question: formatResult["1"],
+    });
+  } catch (error) {
+    console.log(error);
     res.status(500).json({ error: error.message });
   }
 };
