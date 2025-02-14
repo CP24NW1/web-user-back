@@ -1,3 +1,4 @@
+import Joi from "joi";
 import { pool } from "../db.js";
 import {
   getAllExamLogIDQuery,
@@ -11,6 +12,22 @@ import {
 
 export const generateRandomExam = async (req, res) => {
   const { user_id } = req.body;
+
+  // const schema = Joi.object({
+  //   user_id: Joi.number().integer().positive().required(),
+  // });
+
+  // // Validate
+  // const { error, value } = schema.validate(req.body, { abortEarly: false });
+
+  // if (error) {
+  //   return res.status(400).json({
+  //     success: false,
+  //     error: "Validation Error",
+  //     details: error.details.map((err) => err.message),
+  //   });
+  // }
+
   try {
     const [rows] = await pool.query(
       "SELECT MAX(exam_id) AS max_exam_id FROM examtesting"
@@ -80,6 +97,22 @@ export const getAllExamLogID = async (req, res) => {
 
 export const getQuestionIDByExamLogID = async (req, res) => {
   const { exam_id } = req.body;
+
+  const schema = Joi.object({
+    exam_id: Joi.number().integer().positive().required(),
+  });
+
+  // Validate
+  const { error, value } = schema.validate(req.body, { abortEarly: false });
+
+  if (error) {
+    return res.status(400).json({
+      success: false,
+      error: "Validation Error",
+      details: error.details.map((err) => err.message),
+    });
+  }
+
   try {
     const [result] = await pool.query(getQuestionIDByExamLogIDQuery, [exam_id]);
 
@@ -124,6 +157,8 @@ export const getQuestionDetailByExamIDAndQuestionID = async (req, res) => {
       },
       {}
     );
+
+    console.log(formatResult);
 
     res.status(200).json({
       question: formatResult["1"],
