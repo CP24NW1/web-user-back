@@ -77,7 +77,7 @@ export const getAllExamLogID = async (req, res) => {
   try {
     const [result] = await pool.query(getAllExamLogIDQuery);
 
-    if (result.length < 1) {
+    if (result.length === 0) {
       res.status(400).json({
         error: "No exam on the database",
       });
@@ -92,14 +92,13 @@ export const getAllExamLogID = async (req, res) => {
 };
 
 //-------------------
-// GET EXAM BY ID
+// GET QUESTION DETAIL
 //-------------------
 
-export const getQuestionIDByExamLogID = async (req, res) => {
-  const { exam_id } = req.body;
-
+export const getQuestionDetailByExamIDAndQuestionID = async (req, res) => {
   const schema = Joi.object({
-    exam_id: Joi.number().integer().positive().required(),
+    exam_id: Joi.number().integer().positive().required().min(0),
+    index: Joi.number().integer().positive().required().min(0),
   });
 
   // Validate
@@ -113,36 +112,24 @@ export const getQuestionIDByExamLogID = async (req, res) => {
     });
   }
 
-  try {
-    const [result] = await pool.query(getQuestionIDByExamLogIDQuery, [exam_id]);
+  //prettier-ignore
+  const { exam_id, index } = value;
 
-    if (result.length < 1) {
+  try {
+    const [question_id] = await pool.query(getQuestionIDByExamLogIDQuery, [
+      exam_id,
+    ]);
+
+    if (question_id.length === 0) {
       return res.status(404).json({
         error: "exam_id not found on the database",
       });
     }
-    const questionIDs = result.map((r) => r.question_id);
+    const questionID = question_id.map((r) => r.question_id)[index];
 
-    res.json({
-      question_id: questionIDs,
-    });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ error: error.message });
-  }
-};
-
-//-------------------
-// GET QUESTION DETAIL
-//-------------------
-
-export const getQuestionDetailByExamIDAndQuestionID = async (req, res) => {
-  const { exam_id, question_id } = req.body;
-
-  try {
     const [result] = await pool.query(
       getQuestionDetailByExamLogIDAndQuestionIDQuery,
-      [exam_id, question_id]
+      [exam_id, questionID]
     );
 
     const formatResult = result.reduce(
@@ -158,10 +145,14 @@ export const getQuestionDetailByExamIDAndQuestionID = async (req, res) => {
       {}
     );
 
-    console.log(formatResult);
+    let entryResult;
+
+    Object.values(formatResult).forEach((entry) => {
+      entryResult = entry;
+    });
 
     res.status(200).json({
-      question: formatResult["1"],
+      question: entryResult,
     });
   } catch (error) {
     console.log(error);
