@@ -3,6 +3,7 @@ import { pool } from "../db.js";
 import {
   createExamByRandomQuery,
   getAllExamLogIDQuery,
+  getAllQuestionDetailByExamLogID,
   getCorrectOptionIDByQuestionIDQuery,
   getMaxExamIDQuery,
   getOptionRangeQuery,
@@ -346,6 +347,70 @@ export const getCountQuestionByExamID = async (req, res) => {
 
     res.status(200).json({
       question_count: count,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+//-------------------
+// GET EXAM TESTED DETAIL
+//-------------------
+
+export const getExamTestedDetail = async (req, res) => {
+  const schema = Joi.object({
+    exam_id: Joi.number().integer().positive().required(),
+  });
+
+  // Validate
+  const { error, value } = schema.validate(req.body, { abortEarly: false });
+
+  if (error) {
+    return res.status(400).json({
+      success: false,
+      error: "Validation Error",
+      details: error.details.map((err) => err.message),
+    });
+  }
+
+  //prettier-ignore
+  const { exam_id } = value;
+
+  try {
+    const [result] = await pool.query(getAllQuestionDetailByExamLogID, [
+      exam_id,
+    ]);
+
+    if (result.length === 0) {
+      return res.status(404).json({ error: "Exam not found" });
+    }
+
+    const questionsMap = {};
+
+    result.forEach((item) => {
+      if (!questionsMap[item.question_id]) {
+        questionsMap[item.question_id] = {
+          exam_id: item.exam_id,
+          question_id: item.question_id,
+          skill_name: item.skill_name,
+          question_text: item.question_text,
+          selected_option_id: item.selected_option_id,
+          options: [],
+        };
+      }
+
+      questionsMap[item.question_id].options.push({
+        option_id: item.option_id,
+        option_text: item.option_text,
+        is_correct: item.is_correct,
+      });
+    });
+
+    const formatData = Object.values(questionsMap);
+
+    res.status(200).json({
+      exam_detail: formatData,
     });
   } catch (error) {
     console.log(error);

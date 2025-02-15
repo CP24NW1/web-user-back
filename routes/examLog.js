@@ -4,6 +4,7 @@ import {
   generateRandomExam,
   getAllExamLogID,
   getCountQuestionByExamID,
+  getExamTestedDetail,
   getQuestionDetailByExamIDAndQuestionID,
   updateSelectOption,
 } from "../controllers/examlog.js";
@@ -17,5 +18,6 @@ router.post("/question", getQuestionDetailByExamIDAndQuestionID);
 router.put("/select", updateSelectOption);
 router.put("/submit", checkAnswer);
 router.get("/question/count", getCountQuestionByExamID);
+router.get("/history", getExamTestedDetail);
 
 export default router;

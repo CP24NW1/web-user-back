@@ -24,3 +24,10 @@ export const getSelectedOptionIDByQuestionIDQuery = `SELECT e.selected_option_id
 export const getCorrectOptionIDByQuestionIDQuery = `SELECT o.option_id FROM choiceoption o WHERE o.question_id = ? AND o.is_correct = 1`;
 
 export const updateExamScore = `UPDATE examtesting e SET e.is_correct = ? WHERE e.exam_id = ? AND e.question_id = ?`;
+
+export const getAllQuestionDetailByExamLogID = `SELECT e.exam_id,  q.question_id, s.skill_name, q.question_text, o.option_id, o.option_text, o.is_correct, e.selected_option_id
+FROM examtesting e 
+JOIN question q ON e.question_id = q.question_id
+JOIN skill s ON s.skill_id = q.skill_id
+JOIN choiceoption o ON o.question_id = q.question_id
+WHERE exam_id = ?;`;
