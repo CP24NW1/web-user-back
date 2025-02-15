@@ -10,6 +10,7 @@ import {
   getQuestionIDByExamLogIDQuery,
   getQuestionsRandomQuery,
   getSelectedOptionIDByQuestionIDQuery,
+  updateExamScore,
   updateSelectOptionQuery,
 } from "../queries/examLogQueries.js";
 
@@ -230,15 +231,30 @@ export const updateSelectOption = async (req, res) => {
 //get summary
 
 export const checkAnswer = async (req, res) => {
-  const { exam_id } = req.body;
+  const schema = Joi.object({
+    exam_id: Joi.number().integer().positive().required(),
+  });
 
-  //selected_option_id per question_id
-  //correct_option_id per question_id
+  // Validate
+  const { error, value } = schema.validate(req.body, { abortEarly: false });
+
+  if (error) {
+    return res.status(400).json({
+      success: false,
+      error: "Validation Error",
+      details: error.details.map((err) => err.message),
+    });
+  }
+
+  //prettier-ignore
+  const { exam_id } = value;
 
   try {
     const [questionID] = await pool.query(getQuestionIDByExamLogIDQuery, [
       exam_id,
     ]);
+
+    // console.log(exam_id);
 
     if (!questionID.length) {
       return res
@@ -247,51 +263,90 @@ export const checkAnswer = async (req, res) => {
     }
 
     const questionCheckList = questionID.map((q) => q.question_id);
+    const results = [];
 
-    // const [selectedOptionID] = await pool.query(
-    //   getSelectedOptionIDByQuestionIDQuery,
-    //   [1]
-    // );
+    for (const question_id of questionCheckList) {
+      const [[selectedOption]] = await pool.query(
+        getSelectedOptionIDByQuestionIDQuery,
+        [exam_id, question_id]
+      );
+      const [[correctOption]] = await pool.query(
+        getCorrectOptionIDByQuestionIDQuery,
+        [question_id]
+      );
 
-    // const [correctOptionID] = await pool.query(
-    //   getCorrectOptionIDByQuestionIDQuery,
-    //   [1]
-    // );
+      if (!selectedOption?.selected_option_id) {
+        return res
+          .status(400)
+          .json({ error: `question_id: ${question_id} no selected option` });
+      }
 
-    // console.log(questionID.map((q) => q.question_id));
+      const isCorrect =
+        selectedOption.selected_option_id === correctOption?.option_id ? 1 : 0;
 
-    // //question_id for checking
-    // //sample [5, 2, 1, 3, 4]
-    // const questionCheckList = questionID.map((q) => q.question_id);
+      await pool.query(updateExamScore, [isCorrect, exam_id, question_id]);
 
-    // //option_id that user selected
-    // const selectedOption = selectedOptionID[0]?.selected_option_id;
+      results.push({
+        question_id,
+        selected_option_id: selectedOption.selected_option_id,
+        correct_option_id: correctOption?.option_id || null,
+        isCorrect,
+      });
+    }
 
-    // //option_id that correct
-    // const correctOption = correctOptionID[0]?.option_id;
+    const correctCount = results.filter((r) => r.isCorrect).length;
+    const totalQuestions = results.length;
 
-    const results = await Promise.all(
-      questionCheckList.map(async (question_id) => {
-        const [[selectedOption]] = await pool.query(
-          getSelectedOptionIDByQuestionIDQuery,
-          [question_id]
-        );
-        const [[correctOption]] = await pool.query(
-          getCorrectOptionIDByQuestionIDQuery,
-          [question_id]
-        );
+    // console.log(results);
 
-        return {
-          question_id,
-          selected_option_id: selectedOption?.selected_option_id || null,
-          correct_option_id: correctOption?.option_id || null,
-          isCorrect:
-            selectedOption?.selected_option_id === correctOption?.option_id,
-        };
-      })
-    );
+    res.status(200).json({
+      success: true,
+      total: totalQuestions,
+      correct: correctCount,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: error.message });
+  }
+};
 
-    res.send(200);
+//-------------------
+// GET COUNT QUESTION BY EXAM ID
+//-------------------
+
+export const getCountQuestionByExamID = async (req, res) => {
+  const schema = Joi.object({
+    exam_id: Joi.number().integer().positive().required(),
+  });
+
+  // Validate
+  const { error, value } = schema.validate(req.body, { abortEarly: false });
+
+  if (error) {
+    return res.status(400).json({
+      success: false,
+      error: "Validation Error",
+      details: error.details.map((err) => err.message),
+    });
+  }
+
+  //prettier-ignore
+  const { exam_id } = value;
+
+  try {
+    const [result] = await pool.query(getQuestionIDByExamLogIDQuery, [exam_id]);
+
+    if (result.length === 0) {
+      return res
+        .status(404)
+        .json({ error: "No questions found for this exam." });
+    }
+
+    const count = result?.length;
+
+    res.status(200).json({
+      question_count: count,
+    });
   } catch (error) {
     console.log(error);
     res.status(500).json({ error: error.message });
