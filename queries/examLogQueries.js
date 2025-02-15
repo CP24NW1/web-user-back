@@ -30,4 +30,6 @@ FROM examtesting e
 JOIN question q ON e.question_id = q.question_id
 JOIN skill s ON s.skill_id = q.skill_id
 JOIN choiceoption o ON o.question_id = q.question_id
-WHERE exam_id = ?;`;
+WHERE exam_id = ? ORDER BY e.exam_question_id;`;
+
+export const getNotCompletedExamID = `SELECT DISTINCT e.exam_id FROM examtesting e WHERE e.selected_option_id IS null;`;

@@ -6,6 +6,7 @@ import {
   getAllQuestionDetailByExamLogID,
   getCorrectOptionIDByQuestionIDQuery,
   getMaxExamIDQuery,
+  getNotCompletedExamID,
   getOptionRangeQuery,
   getQuestionDetailByExamLogIDAndQuestionIDQuery,
   getQuestionIDByExamLogIDQuery,
@@ -79,14 +80,26 @@ export const getAllExamLogID = async (req, res) => {
   try {
     const [result] = await pool.query(getAllExamLogIDQuery);
 
+    const [notCompleteExamID] = await pool.query(getNotCompletedExamID);
+
     if (result.length === 0) {
       return res.status(400).json({
         error: "No exam on the database",
       });
     }
+    // สร้าง Set ของ exam_id ที่ยังไม่เสร็จ
+    const notCompletedSet = new Set(
+      notCompleteExamID.map((exam) => exam.exam_id)
+    );
+
+    // เพิ่ม is_completed ในแต่ละ exam
+    const examsWithStatus = result.map((exam) => ({
+      ...exam,
+      is_completed: !notCompletedSet.has(exam.exam_id),
+    }));
 
     res.status(200).json({
-      exams: result,
+      exams: examsWithStatus,
     });
   } catch (error) {
     console.log(error);
@@ -213,9 +226,18 @@ export const updateSelectOption = async (req, res) => {
       question_id,
     ]);
 
+    const [notCompleteExamIDResult] = await pool.query(getNotCompletedExamID);
+
+    const notCompleteExamID = notCompleteExamIDResult.map(
+      (exam) => exam.exam_id
+    );
+
+    const isCompleted = !notCompleteExamID.includes(exam_id);
+
     res.status(200).json({
       success: true,
       message: "Option saved",
+      is_completed: isCompleted,
     });
   } catch (error) {
     console.log(error);
@@ -386,30 +408,35 @@ export const getExamTestedDetail = async (req, res) => {
       return res.status(404).json({ error: "Exam not found" });
     }
 
-    const questionsMap = {};
+    const questionsMap = new Map();
 
     result.forEach((item) => {
-      if (!questionsMap[item.question_id]) {
-        questionsMap[item.question_id] = {
+      if (!questionsMap.has(item.question_id)) {
+        questionsMap.set(item.question_id, {
           exam_id: item.exam_id,
           question_id: item.question_id,
           skill_name: item.skill_name,
           question_text: item.question_text,
           selected_option_id: item.selected_option_id,
           options: [],
-        };
+        });
       }
 
-      questionsMap[item.question_id].options.push({
+      questionsMap.get(item.question_id).options.push({
         option_id: item.option_id,
         option_text: item.option_text,
         is_correct: item.is_correct,
       });
     });
 
-    const formatData = Object.values(questionsMap);
+    const formatData = Array.from(questionsMap.values());
+
+    const isCompleted = !formatData.some(
+      (data) => data.selected_option_id === null
+    );
 
     res.status(200).json({
+      is_completed: isCompleted,
       exam_detail: formatData,
     });
   } catch (error) {
