@@ -18,3 +18,7 @@ WHERE exam_id = ? and e.question_id = ?;`;
 export const updateSelectOptionQuery = `UPDATE examtesting e SET e.selected_option_id = ? WHERE e.exam_id = ? AND e.question_id = ?`;
 
 export const getOptionRangeQuery = `SELECT o.option_id FROM choiceoption o WHERE o.question_id = ?`;
+
+export const getSelectedOptionIDByQuestionIDQuery = `SELECT e.selected_option_id FROM examtesting e WHERE e.question_id = ?`;
+
+export const getCorrectOptionIDByQuestionIDQuery = `SELECT o.option_id FROM choiceoption o WHERE o.question_id = ? AND o.is_correct = 1`;

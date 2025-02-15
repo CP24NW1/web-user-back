@@ -3,11 +3,13 @@ import { pool } from "../db.js";
 import {
   createExamByRandomQuery,
   getAllExamLogIDQuery,
+  getCorrectOptionIDByQuestionIDQuery,
   getMaxExamIDQuery,
   getOptionRangeQuery,
   getQuestionDetailByExamLogIDAndQuestionIDQuery,
   getQuestionIDByExamLogIDQuery,
   getQuestionsRandomQuery,
+  getSelectedOptionIDByQuestionIDQuery,
   updateSelectOptionQuery,
 } from "../queries/examLogQueries.js";
 
@@ -76,10 +78,11 @@ export const getAllExamLogID = async (req, res) => {
     const [result] = await pool.query(getAllExamLogIDQuery);
 
     if (result.length === 0) {
-      res.status(400).json({
+      return res.status(400).json({
         error: "No exam on the database",
       });
     }
+
     res.status(200).json({
       exams: result,
     });
@@ -96,7 +99,7 @@ export const getAllExamLogID = async (req, res) => {
 export const getQuestionDetailByExamIDAndQuestionID = async (req, res) => {
   const schema = Joi.object({
     exam_id: Joi.number().integer().positive().required(),
-    index: Joi.number().integer().positive().required(),
+    index: Joi.number().integer().required().min(0),
   });
 
   // Validate
@@ -228,4 +231,69 @@ export const updateSelectOption = async (req, res) => {
 
 export const checkAnswer = async (req, res) => {
   const { exam_id } = req.body;
+
+  //selected_option_id per question_id
+  //correct_option_id per question_id
+
+  try {
+    const [questionID] = await pool.query(getQuestionIDByExamLogIDQuery, [
+      exam_id,
+    ]);
+
+    if (!questionID.length) {
+      return res
+        .status(404)
+        .json({ error: "No questions found for this exam." });
+    }
+
+    const questionCheckList = questionID.map((q) => q.question_id);
+
+    // const [selectedOptionID] = await pool.query(
+    //   getSelectedOptionIDByQuestionIDQuery,
+    //   [1]
+    // );
+
+    // const [correctOptionID] = await pool.query(
+    //   getCorrectOptionIDByQuestionIDQuery,
+    //   [1]
+    // );
+
+    // console.log(questionID.map((q) => q.question_id));
+
+    // //question_id for checking
+    // //sample [5, 2, 1, 3, 4]
+    // const questionCheckList = questionID.map((q) => q.question_id);
+
+    // //option_id that user selected
+    // const selectedOption = selectedOptionID[0]?.selected_option_id;
+
+    // //option_id that correct
+    // const correctOption = correctOptionID[0]?.option_id;
+
+    const results = await Promise.all(
+      questionCheckList.map(async (question_id) => {
+        const [[selectedOption]] = await pool.query(
+          getSelectedOptionIDByQuestionIDQuery,
+          [question_id]
+        );
+        const [[correctOption]] = await pool.query(
+          getCorrectOptionIDByQuestionIDQuery,
+          [question_id]
+        );
+
+        return {
+          question_id,
+          selected_option_id: selectedOption?.selected_option_id || null,
+          correct_option_id: correctOption?.option_id || null,
+          isCorrect:
+            selectedOption?.selected_option_id === correctOption?.option_id,
+        };
+      })
+    );
+
+    res.send(200);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: error.message });
+  }
 };
