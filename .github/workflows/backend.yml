@@ -1,0 +1,75 @@
+name: Backend CI/CD
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to deploy'
+        required: true
+        default: 'main'
+
+jobs:
+  backend-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout Source Code
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      # Install OpenVPN
+      - name: Install OpenVPN
+        run: |
+          sudo apt update
+          sudo apt install -y openvpn openvpn-systemd-resolved
+
+      # Connect to VPN
+      - name: Connect to VPN
+        uses: kota65535/github-openvpn-connect-action@v2
+        with:
+          config_file: .github/workflows/sitst-client.ovpn
+          username: ${{ secrets.OVPN_USERNAME }}
+          password: ${{ secrets.OVPN_PASSWORD }}
+
+      # Build and Push Docker Image
+      - name: Build and Push Backend Docker Image
+        env:
+          IMAGE_NAME: wachrawit/my-backend-app
+          IMAGE_TAG: ${{ github.event.inputs.branch }}
+        run: |
+          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+          docker build -f Dockerfile -t $IMAGE_NAME:$IMAGE_TAG .
+
+          docker push $IMAGE_NAME:$IMAGE_TAG
+
+      # Deploy Backend
+      - name: Deploy Backend
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          script: |
+            IMAGE_NAME=wachrawit/my-backend-app
+            IMAGE_TAG=${{ github.event.inputs.branch }}
+
+            echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+            # Step 1: Stop and remove any existing container
+            docker stop backend-app-admin || true && docker rm backend-app-admin || true
+
+            # Step 2: Remove old image
+            docker rmi -f $IMAGE_NAME:$IMAGE_TAG || true
+
+            # Step 3: Pull the latest image
+            docker pull $IMAGE_NAME:$IMAGE_TAG
+
+            # Step 4: Clean up unused images
+            docker image prune -f
+
+            # Step 5: Run Backend Container with required environment variables
+            docker run -d --name backend-app-admin \
+              --network app-network \
+              -p 8000:8001 \
+              $IMAGE_NAME:$IMAGE_TAG
