@@ -17,7 +17,7 @@ router.get("/examID", getAllExamLogID);
 router.post("/question", getQuestionDetailByExamIDAndQuestionID);
 router.put("/select", updateSelectOption);
 router.put("/submit", checkAnswer);
-router.get("/question/count", getCountQuestionByExamID);
-router.get("/history", getExamTestedDetail);
+router.post("/question/count", getCountQuestionByExamID);
+router.post("/history", getExamTestedDetail);
 
 export default router;
