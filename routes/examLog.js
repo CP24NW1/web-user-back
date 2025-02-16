@@ -7,7 +7,7 @@ import {
   getExamTestedDetail,
   getQuestionDetailByExamIDAndQuestionID,
   updateSelectOption,
-} from "../controllers/examlog.js";
+} from "../controllers/examLog.js";
 
 const router = express.Router();
 

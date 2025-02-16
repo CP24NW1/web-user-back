@@ -5,6 +5,7 @@ import {
   getAllExamLogIDQuery,
   getAllQuestionDetailByExamLogID,
   getCorrectOptionIDByQuestionIDQuery,
+  getInprogressExamID,
   getMaxExamIDQuery,
   getNotCompletedExamID,
   getOptionRangeQuery,
@@ -87,12 +88,11 @@ export const getAllExamLogID = async (req, res) => {
         error: "No exam on the database",
       });
     }
-    // สร้าง Set ของ exam_id ที่ยังไม่เสร็จ
+
     const notCompletedSet = new Set(
       notCompleteExamID.map((exam) => exam.exam_id)
     );
 
-    // เพิ่ม is_completed ในแต่ละ exam
     const examsWithStatus = result.map((exam) => ({
       ...exam,
       is_completed: !notCompletedSet.has(exam.exam_id),
@@ -220,24 +220,31 @@ export const updateSelectOption = async (req, res) => {
     //prettier-ignore
     const { exam_id, question_id, option_id } = value;
 
-    const [result] = await pool.query(updateSelectOptionQuery, [
+    const [isExamCompletedResult] = await pool.query(getNotCompletedExamID);
+    const notCompleteExamID = isExamCompletedResult.map((exam) => exam.exam_id);
+    const isCompleted = !notCompleteExamID.includes(exam_id);
+
+    if (isCompleted) {
+      return res.status(400).json({
+        success: false,
+        error: "This exam has already been taken.",
+      });
+    }
+
+    const [isExamInprogress] = await pool.query(getInprogressExamID);
+    const inProgressExamID = isExamInprogress.map((exam) => exam.exam_id);
+    const isInprogress = inProgressExamID.includes(exam_id);
+
+    await pool.query(updateSelectOptionQuery, [
       option_id,
       exam_id,
       question_id,
     ]);
 
-    const [notCompleteExamIDResult] = await pool.query(getNotCompletedExamID);
-
-    const notCompleteExamID = notCompleteExamIDResult.map(
-      (exam) => exam.exam_id
-    );
-
-    const isCompleted = !notCompleteExamID.includes(exam_id);
-
     res.status(200).json({
       success: true,
       message: "Option saved",
-      is_completed: isCompleted,
+      is_inprogress: isInprogress,
     });
   } catch (error) {
     console.log(error);
@@ -414,6 +421,7 @@ export const getExamTestedDetail = async (req, res) => {
       if (!questionsMap.has(item.question_id)) {
         questionsMap.set(item.question_id, {
           exam_id: item.exam_id,
+          finish_at: item.finish_at,
           question_id: item.question_id,
           skill_name: item.skill_name,
           question_text: item.question_text,
@@ -431,9 +439,7 @@ export const getExamTestedDetail = async (req, res) => {
 
     const formatData = Array.from(questionsMap.values());
 
-    const isCompleted = !formatData.some(
-      (data) => data.selected_option_id === null
-    );
+    const isCompleted = !formatData.some((data) => data.finish_at === null);
 
     res.status(200).json({
       is_completed: isCompleted,
