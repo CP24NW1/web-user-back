@@ -57,7 +57,7 @@ jobs:
             echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
             # Step 1: Stop and remove any existing container
-            docker stop backend-app-user || true && docker rm backend-app-user || true
+            docker stop my-backend-user || true && docker rm my-backend-user || true
 
             # Step 2: Remove old image
             docker rmi -f $IMAGE_NAME:$IMAGE_TAG || true
@@ -69,7 +69,7 @@ jobs:
             docker image prune -f
 
             # Step 5: Run Backend Container with required environment variables
-            docker run -d --name backend-app-user \
+            docker run -d --name my-backend-user \
               --network app-network \
               -p 8001:5000 \
               $IMAGE_NAME:$IMAGE_TAG
