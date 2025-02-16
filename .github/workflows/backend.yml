@@ -71,5 +71,5 @@ jobs:
             # Step 5: Run Backend Container with required environment variables
             docker run -d --name my-backend-user \
               --network app-network \
-              -p 8001:5000 \
+              -p 6001:5000 \
               $IMAGE_NAME:$IMAGE_TAG
