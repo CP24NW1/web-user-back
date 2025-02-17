@@ -231,15 +231,15 @@ export const updateSelectOption = async (req, res) => {
       });
     }
 
-    const [isExamInprogress] = await pool.query(getInprogressExamID);
-    const inProgressExamID = isExamInprogress.map((exam) => exam.exam_id);
-    const isInprogress = inProgressExamID.includes(exam_id);
-
     await pool.query(updateSelectOptionQuery, [
       option_id,
       exam_id,
       question_id,
     ]);
+
+    const [isExamInprogress] = await pool.query(getInprogressExamID);
+    const inProgressExamID = isExamInprogress.map((exam) => exam.exam_id);
+    const isInprogress = inProgressExamID.includes(exam_id);
 
     res.status(200).json({
       success: true,
