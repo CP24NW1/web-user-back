@@ -441,8 +441,13 @@ export const getExamTestedDetail = async (req, res) => {
 
     const isCompleted = !formatData.some((data) => data.finish_at === null);
 
+    const [isExamInprogress] = await pool.query(getInprogressExamID);
+    const inProgressExamID = isExamInprogress.map((exam) => exam.exam_id);
+    const isInprogress = inProgressExamID.includes(exam_id);
+
     res.status(200).json({
       is_completed: isCompleted,
+      is_inprogress: isInprogress,
       exam_detail: formatData,
     });
   } catch (error) {
