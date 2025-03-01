@@ -111,70 +111,70 @@ export const getAllExamLogID = async (req, res) => {
 // GET QUESTION DETAIL
 //-------------------
 
-export const getQuestionDetailByExamIDAndQuestionID = async (req, res) => {
-  const schema = Joi.object({
-    exam_id: Joi.number().integer().positive().required(),
-    index: Joi.number().integer().required().min(0),
-  });
+// export const getQuestionDetailByExamIDAndQuestionID = async (req, res) => {
+//   const schema = Joi.object({
+//     exam_id: Joi.number().integer().positive().required(),
+//     index: Joi.number().integer().required().min(0),
+//   });
 
-  // Validate
-  const { error, value } = schema.validate(req.body, { abortEarly: false });
+//   // Validate
+//   const { error, value } = schema.validate(req.body, { abortEarly: false });
 
-  if (error) {
-    return res.status(400).json({
-      success: false,
-      error: "Validation Error",
-      details: error.details.map((err) => err.message),
-    });
-  }
+//   if (error) {
+//     return res.status(400).json({
+//       success: false,
+//       error: "Validation Error",
+//       details: error.details.map((err) => err.message),
+//     });
+//   }
 
-  //prettier-ignore
-  const { exam_id, index } = value;
+//   //prettier-ignore
+//   const { exam_id, index } = value;
 
-  try {
-    const [question_id] = await pool.query(getQuestionIDByExamLogIDQuery, [
-      exam_id,
-    ]);
+//   try {
+//     const [question_id] = await pool.query(getQuestionIDByExamLogIDQuery, [
+//       exam_id,
+//     ]);
 
-    if (question_id.length === 0) {
-      return res.status(404).json({
-        error: "exam_id not found on the database",
-      });
-    }
-    const questionID = question_id.map((r) => r.question_id)[index];
+//     if (question_id.length === 0) {
+//       return res.status(404).json({
+//         error: "exam_id not found on the database",
+//       });
+//     }
+//     const questionID = question_id.map((r) => r.question_id)[index];
 
-    const [result] = await pool.query(
-      getQuestionDetailByExamLogIDAndQuestionIDQuery,
-      [exam_id, questionID]
-    );
+//     const [result] = await pool.query(
+//       getQuestionDetailByExamLogIDAndQuestionIDQuery,
+//       [exam_id, questionID]
+//     );
 
-    const formatResult = result.reduce(
-      (acc, { option_id, option_text, is_correct, ...rest }) => {
-        acc[rest.question_id] ??= { ...rest, options: [] };
-        acc[rest.question_id].options.push({
-          option_id,
-          option_text,
-          is_correct,
-        });
-        return acc;
-      },
-      {}
-    );
+//     const formatResult = result.reduce(
+//       (acc, { option_id, option_text, is_correct, ...rest }) => {
+//         acc[rest.question_id] ??= { ...rest, options: [] };
+//         acc[rest.question_id].options.push({
+//           option_id,
+//           option_text,
+//           is_correct,
+//         });
+//         return acc;
+//       },
+//       {}
+//     );
 
-    let entryResult;
+//     let entryResult;
 
-    Object.values(formatResult).forEach((entry) => {
-      entryResult = entry;
-    });
+//     Object.values(formatResult).forEach((entry) => {
+//       entryResult = entry;
+//     });
 
-    res.status(200).json({
-      question: entryResult,
-    });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ error: error.message });
-  }
-};
+//     res.status(200).json({
+//       question: entryResult,
+//     });
+//   } catch (error) {
+//     console.log(error);
+//     res.status(500).json({ error: error.message });
+//   }
+// };
 
 //-------------------
 // USER SELECT OPTION
@@ -261,30 +261,13 @@ export const updateSelectOption = async (req, res) => {
 //get summary
 
 export const checkAnswer = async (req, res) => {
-  const schema = Joi.object({
-    exam_id: Joi.number().integer().positive().required(),
-  });
-
-  // Validate
-  const { error, value } = schema.validate(req.body, { abortEarly: false });
-
-  if (error) {
-    return res.status(400).json({
-      success: false,
-      error: "Validation Error",
-      details: error.details.map((err) => err.message),
-    });
-  }
-
   //prettier-ignore
-  const { exam_id } = value;
+  const { exam_id } = req.params
 
   try {
     const [questionID] = await pool.query(getQuestionIDByExamLogIDQuery, [
       exam_id,
     ]);
-
-    // console.log(exam_id);
 
     if (!questionID.length) {
       return res
@@ -345,23 +328,8 @@ export const checkAnswer = async (req, res) => {
 //-------------------
 
 export const getCountQuestionByExamID = async (req, res) => {
-  const schema = Joi.object({
-    exam_id: Joi.number().integer().positive().required(),
-  });
-
-  // Validate
-  const { error, value } = schema.validate(req.body, { abortEarly: false });
-
-  if (error) {
-    return res.status(400).json({
-      success: false,
-      error: "Validation Error",
-      details: error.details.map((err) => err.message),
-    });
-  }
-
   //prettier-ignore
-  const { exam_id } = value;
+  const { exam_id } = req.params;
 
   try {
     const [result] = await pool.query(getQuestionIDByExamLogIDQuery, [exam_id]);
@@ -388,23 +356,8 @@ export const getCountQuestionByExamID = async (req, res) => {
 //-------------------
 
 export const getExamTestedDetail = async (req, res) => {
-  const schema = Joi.object({
-    exam_id: Joi.number().integer().positive().required(),
-  });
-
-  // Validate
-  const { error, value } = schema.validate(req.body, { abortEarly: false });
-
-  if (error) {
-    return res.status(400).json({
-      success: false,
-      error: "Validation Error",
-      details: error.details.map((err) => err.message),
-    });
-  }
-
   //prettier-ignore
-  const { exam_id } = value;
+  const { exam_id } = req.params;
 
   try {
     const [result] = await pool.query(getAllQuestionDetailByExamLogID, [
