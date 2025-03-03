@@ -1,7 +1,15 @@
 import { pool } from "../db.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { getExistUser, saveUser } from "../queries/authQueries.js";
+import {
+  getExistUser,
+  saveUser,
+  verifyEmailSuccess,
+} from "../queries/authQueries.js";
+import {
+  generateVerificationCode,
+  sendVerificationEmail,
+} from "../utils/emailUtils.js";
 
 const accessSecret = process.env.JWT_ACCESS_SECRET;
 const refreshSecret = process.env.JWT_REFRESH_SECRET;
@@ -12,17 +20,23 @@ const refreshSecret = process.env.JWT_REFRESH_SECRET;
 
 export const register = async (req, res) => {
   try {
+    //validate data
     const { firstname, lastname, email, dob, password } = req.body;
+
     const [user] = await pool.query(getExistUser, [email]);
     if (user.length > 0) {
       return res.status(400).json({
         success: false,
-        message: "User already exists",
+        message: "User's email already exists",
       });
     }
 
     const salt = await bcrypt.genSalt(10);
     const encryptPassword = await bcrypt.hash(password, salt);
+
+    const verificationCode = generateVerificationCode();
+
+    await sendVerificationEmail(email, verificationCode);
 
     await pool.query(saveUser, [
       firstname,
@@ -30,16 +44,67 @@ export const register = async (req, res) => {
       email,
       dob,
       encryptPassword,
+      false,
+      verificationCode,
     ]);
+
     res.status(201).json({
       success: true,
-      message: "Registration successful",
+      message:
+        "Registration successful. Please check your email to verify your account.",
     });
   } catch (error) {
     console.log(error);
     res.status(500).json({
       success: false,
       message: "An error occurred during registration. Please try again later.",
+    });
+  }
+};
+
+//-------------------
+// EMAIL VERIFICATION
+//-------------------
+
+export const verifyEmail = async (req, res) => {
+  try {
+    const { email, code } = req.body;
+
+    if (!email || !code) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and verification code are required.",
+      });
+    }
+
+    const [user] = await pool.query(getExistUser, [email]);
+
+    if (user.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
+
+    if (user[0].verification_code !== code) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid verification code.",
+      });
+    }
+
+    await pool.query(verifyEmailSuccess, [true, email]);
+
+    res.status(200).json({
+      success: true,
+      message: "Email verified successfully.",
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      success: false,
+      message:
+        "An error occurred during email verification. Please try again later.",
     });
   }
 };
@@ -58,6 +123,14 @@ export const login = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "User not found",
+      });
+    }
+
+    // ตรวจสอบว่าผู้ใช้ยืนยันอีเมลหรือยัง
+    if (!user[0].is_verify) {
+      return res.status(403).json({
+        success: false,
+        message: "Please verify your email before logging in",
       });
     }
 
