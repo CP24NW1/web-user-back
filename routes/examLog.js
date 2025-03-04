@@ -2,7 +2,7 @@ import express from "express";
 import {
   checkAnswer,
   generateRandomExam,
-  getAllExamLogID,
+  getAllExamLog,
   getCountQuestionByExamID,
   getExamTestedDetail,
   updateSelectOption,
@@ -12,8 +12,10 @@ import { auth } from "../middleware/auth.js";
 
 const router = express.Router();
 
+//
 router.post("/random", auth, generateRandomExam);
-router.get("/examID", auth, getAllExamLogID);
+//เปลี่ยน path api
+router.get("/:user_id/all", auth, getAllExamLog);
 //แก้ สรุปใช้อยุ่ไหม
 // router.post("/question", getQuestionDetailByExamIDAndQuestionID);
 router.put("/select/", auth, updateSelectOption);

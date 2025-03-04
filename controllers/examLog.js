@@ -2,7 +2,7 @@ import Joi from "joi";
 import { pool } from "../db.js";
 import {
   createExamByRandomQuery,
-  getAllExamLogIDQuery,
+  getAllExamLogQuery,
   getAllQuestionDetailByExamLogID,
   getCorrectOptionIDByQuestionIDQuery,
   getInprogressExamID,
@@ -16,6 +16,7 @@ import {
   updateExamScore,
   updateSelectOptionQuery,
 } from "../queries/examLogQueries.js";
+import { getExistUser, getUserDetail } from "../queries/authQueries.js";
 
 //-------------------
 // CREATE EXAM RANDOMLY
@@ -24,20 +25,28 @@ import {
 export const generateRandomExam = async (req, res) => {
   const { user_id } = req.body;
 
-  // const schema = Joi.object({
-  //   user_id: Joi.number().integer().positive().required(),
-  // });
+  const schema = Joi.object({
+    user_id: Joi.number().integer().positive().required(),
+  });
 
-  // // Validate
-  // const { error, value } = schema.validate(req.body, { abortEarly: false });
+  // Validate
+  const { error, value } = schema.validate(req.body, { abortEarly: false });
 
-  // if (error) {
-  //   return res.status(400).json({
-  //     success: false,
-  //     error: "Validation Error",
-  //     details: error.details.map((err) => err.message),
-  //   });
-  // }
+  if (error) {
+    return res.status(400).json({
+      success: false,
+      error: "Validation Error",
+      details: error.details.map((err) => err.message),
+    });
+  }
+
+  const [existUser] = await pool.query(getUserDetail, [user_id]);
+
+  if (existUser.length === 0) {
+    return res.status(404).json({
+      error: "User not found",
+    });
+  }
 
   try {
     const [rows] = await pool.query(getMaxExamIDQuery);
@@ -53,7 +62,7 @@ export const generateRandomExam = async (req, res) => {
     const examEntries = questions.map((q) => [
       exam_id,
       q.question_id,
-      null,
+      user_id,
       null,
       null,
       false,
@@ -77,9 +86,10 @@ export const generateRandomExam = async (req, res) => {
 // GET EXAM BY ID
 //-------------------
 
-export const getAllExamLogID = async (req, res) => {
+export const getAllExamLog = async (req, res) => {
+  const user_id = req.params?.user_id;
   try {
-    const [result] = await pool.query(getAllExamLogIDQuery);
+    const [result] = await pool.query(getAllExamLogQuery, [user_id]);
 
     const [notCompleteExamID] = await pool.query(getNotCompletedExamID);
 

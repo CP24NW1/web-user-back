@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import {
   getExistUser,
+  getUserDetail,
   saveUser,
   verifyEmailSuccess,
 } from "../queries/authQueries.js";
@@ -142,7 +143,9 @@ export const login = async (req, res) => {
       });
     }
 
-    const payload = { email };
+    const user_id = user[0]?.user_id;
+
+    const payload = { email, user_id };
 
     console.log(payload);
 
@@ -214,6 +217,35 @@ export const refreshAccessToken = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "An error occurred while refreshing access token",
+    });
+  }
+};
+
+//-------------------
+// FETCH USER INFO
+//-------------------
+export const fetchMe = async (req, res) => {
+  const user_id = req.body?.user_id;
+  console.log(user_id);
+  try {
+    const [user] = await pool.query(getUserDetail, [user_id]);
+
+    if (user.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      user: user,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
     });
   }
 };
