@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon server"
+    "start": "nodemon --env-file=.env.development server",
+    "start:prod": "nodemon --env-file=.env.production server"
   },
   "keywords": [],
   "author": "",

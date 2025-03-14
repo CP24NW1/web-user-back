@@ -1,4 +1,10 @@
 import jwt from "jsonwebtoken";
+import { getUserPermissionQuery } from "../queries/authQueries.js";
+import { pool } from "../db.js";
+
+//-------------------
+// AUTHENTICATION
+//-------------------
 
 export const auth = async (req, res, next) => {
   try {
@@ -44,4 +50,42 @@ export const auth = async (req, res, next) => {
       message: "An error occurred during token validation",
     });
   }
+};
+
+//-------------------
+// AUTHORIZE
+//-------------------
+
+export const authorize = (permission) => {
+  return async (req, res, next) => {
+    try {
+      const token = req.headers["authorization"]?.split(" ")[1];
+
+      if (!token) {
+        return res
+          .status(401)
+          .json({ message: "Unauthorized: No token provided" });
+      }
+
+      const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
+      const user_id = decoded.user_id;
+
+      const [results] = await pool.query(getUserPermissionQuery, [user_id]);
+
+      const userPermissions = results.map((perm) => perm.permission);
+
+      if (userPermissions.includes(permission)) {
+        return next();
+      } else {
+        return res
+          .status(403)
+          .json({ message: "Forbidden: Insufficient permissions" });
+      }
+    } catch (err) {
+      if (err.name === "JsonWebTokenError") {
+        return res.status(401).json({ message: "Unauthorized: Invalid token" });
+      }
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  };
 };

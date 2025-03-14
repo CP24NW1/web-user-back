@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import {
   getExistUser,
   getUserDetail,
+  grantPermissionToUserQuery,
   saveUser,
   verifyEmailSuccess,
 } from "../queries/authQueries.js";
@@ -39,7 +40,7 @@ export const register = async (req, res) => {
 
     await sendVerificationEmail(email, verificationCode);
 
-    await pool.query(saveUser, [
+    const [result] = await pool.query(saveUser, [
       firstname,
       lastname,
       email,
@@ -48,6 +49,9 @@ export const register = async (req, res) => {
       false,
       verificationCode,
     ]);
+
+    //add base permission => READ_PROFILE_WEB_USER (permission_id: 2)
+    await pool.query(grantPermissionToUserQuery, [result.insertId, 2]);
 
     res.status(201).json({
       success: true,

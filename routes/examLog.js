@@ -8,19 +8,17 @@ import {
   updateSelectOption,
 } from "../controllers/examLog.js";
 
-import { auth } from "../middleware/auth.js";
+import { auth, authorize } from "../middleware/auth.js";
+import { permissions } from "../utils/permission.js";
 
 const router = express.Router();
 
-//
-router.post("/random", auth, generateRandomExam);
-//เปลี่ยน path api
-router.get("/:user_id/all", auth, getAllExamLog);
-//แก้ สรุปใช้อยุ่ไหม
-// router.post("/question", getQuestionDetailByExamIDAndQuestionID);
-router.put("/select/", auth, updateSelectOption);
-router.put("/:exam_id/submit", auth, checkAnswer);
-router.get("/:exam_id/count", auth, getCountQuestionByExamID);
-router.get("/:exam_id/detail", auth, getExamTestedDetail);
+// EXAM API
+router.post("/random", auth, authorize(permissions.CREATE_EXAM_RANDOM), generateRandomExam);
+router.get("/:user_id/all", auth, authorize(permissions.READ_EXAM) ,getAllExamLog);
+router.put("/select/", auth, authorize(permissions.DO_EXAM) ,updateSelectOption);
+router.put("/:exam_id/submit", auth, authorize(permissions.DO_EXAM), checkAnswer);
+router.get("/:exam_id/count", auth, authorize(permissions.READ_EXAM), getCountQuestionByExamID);
+router.get("/:exam_id/detail", auth, authorize(permissions.READ_EXAM), getExamTestedDetail);
 
 export default router;
