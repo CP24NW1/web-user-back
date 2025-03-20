@@ -1,5 +1,5 @@
 # ใช้ base image ของ Node.js
-FROM node:18-alpine
+FROM node:20-alpine
 
 # ตั้งค่า working directory ใน container
 WORKDIR /usr/src/app
@@ -17,4 +17,4 @@ COPY . .
 EXPOSE 5000
 
 # คำสั่งที่ใช้รันแอปพลิเคชัน
-CMD ["npm", "start"]
+CMD ["npm", "run", "start:prod"]
