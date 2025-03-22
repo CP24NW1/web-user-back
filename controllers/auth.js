@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 import {
   getExistUser,
   getUserDetail,
-  grantPermissionToUserQuery,
+  grantRoleToUser,
   saveUser,
   verifyEmailSuccess,
 } from "../queries/authQueries.js";
@@ -51,7 +51,7 @@ export const register = async (req, res) => {
     ]);
 
     //add base permission => READ_PROFILE_WEB_USER (permission_id: 2)
-    await pool.query(grantPermissionToUserQuery, [result.insertId, 2]);
+    await pool.query(grantRoleToUser, [3, result.insertId]);
 
     res.status(201).json({
       success: true,
@@ -151,8 +151,6 @@ export const login = async (req, res) => {
 
     const payload = { email, user_id };
 
-    console.log(payload);
-
     const accessToken = jwt.sign(payload, accessSecret, { expiresIn: "1h" });
 
     const refreshToken = jwt.sign(payload, refreshSecret, {
@@ -229,8 +227,7 @@ export const refreshAccessToken = async (req, res) => {
 // FETCH USER INFO
 //-------------------
 export const fetchMe = async (req, res) => {
-  const user_id = req.body?.user_id;
-  console.log(user_id);
+  const user_id = req.params?.user_id;
   try {
     const [user] = await pool.query(getUserDetail, [user_id]);
 

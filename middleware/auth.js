@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import { getUserPermissionQuery } from "../queries/authQueries.js";
+import { getUserRoleQuery } from "../queries/authQueries.js";
 import { pool } from "../db.js";
 
 //-------------------
@@ -56,7 +56,7 @@ export const auth = async (req, res, next) => {
 // AUTHORIZE
 //-------------------
 
-export const authorize = (permission) => {
+export const authorize = (role) => {
   return async (req, res, next) => {
     try {
       const token = req.headers["authorization"]?.split(" ")[1];
@@ -68,13 +68,14 @@ export const authorize = (permission) => {
       }
 
       const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
+
       const user_id = decoded.user_id;
 
-      const [results] = await pool.query(getUserPermissionQuery, [user_id]);
+      const [results] = await pool.query(getUserRoleQuery, [user_id]);
 
-      const userPermissions = results.map((perm) => perm.permission);
+      const [userRole] = results.map((result) => result.role);
 
-      if (userPermissions.includes(permission)) {
+      if (role.includes(userRole)) {
         return next();
       } else {
         return res

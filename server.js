@@ -6,6 +6,7 @@ import dotenv from "dotenv";
 import { CustomError } from "./utils/CustomError.js";
 import examRouter from "./routes/examLog.js";
 import authRouter from "./routes/auth.js";
+import dashboardRouter from "./routes/dashboard.js";
 
 dotenv.config();
 
@@ -19,6 +20,7 @@ app.listen(5005, () => console.log("Web User Server is running on port 5005"));
 
 app.use("/api/exam", examRouter);
 app.use("/api/auth", authRouter);
+app.use("/api/dashboard", dashboardRouter);
 
 app.use("/api/check", (req, res) => {
   return res.status(200).json({ message: "ok!" });

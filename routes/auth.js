@@ -16,6 +16,6 @@ router.post("/register", register);
 router.put("/verify", verifyEmail);
 router.post("/login", login);
 router.post("/refresh", refreshAccessToken);
-router.get("/me", auth, fetchMe);
+router.get("/:user_id/me", auth, fetchMe);
 
 export default router;
