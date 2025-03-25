@@ -4,6 +4,7 @@ import {
   examTestedSummarizeAllQuery,
   examTestedSummarizeBySkillQuery,
   generalStatsQuery,
+  getAllSkillQuery,
 } from "../queries/dashboardQueries.js";
 
 import jwt from "jsonwebtoken";
@@ -49,12 +50,25 @@ export const getGeneralStats = async (req, res) => {
   }
 };
 
-export const getBarChartDataQuery = async (req, res) => {
+export const getBarChartData = async (req, res) => {
   try {
     const [data] = await pool.query(barChartDataQuery, [5]);
     res.status(200).json({
       success: true,
       stat: stats,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+export const getAllSkill = async (req, res) => {
+  try {
+    const [skill] = await pool.query(getAllSkillQuery);
+    res.status(200).json({
+      success: true,
+      skill: skill,
     });
   } catch (error) {
     console.error(error);

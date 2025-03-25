@@ -1,6 +1,7 @@
 import express from "express";
 import {
   checkAnswer,
+  generateCustomExam,
   generateRandomExam,
   getAllExamLog,
   getCountQuestionByExamID,
@@ -14,7 +15,8 @@ const router = express.Router();
 
 // EXAM API
 router.post("/random", auth, generateRandomExam);
-router.get("/:user_id/all", getAllExamLog);
+router.post("/custom", auth, generateCustomExam);
+router.get("/:user_id/all", auth, getAllExamLog);
 router.put("/select/", auth, updateSelectOption);
 router.put("/:exam_id/submit", auth, checkAnswer);
 router.get("/:exam_id/count", auth, getCountQuestionByExamID);

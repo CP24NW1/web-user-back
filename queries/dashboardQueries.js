@@ -77,3 +77,5 @@ LEFT JOIN
 GROUP BY 
     s.skill_name;
 `;
+
+export const getAllSkillQuery = `SELECT * FROM skill;`;

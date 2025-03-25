@@ -1,7 +1,7 @@
 import Joi from "joi";
 import { pool } from "../db.js";
 import {
-  createExamByRandomQuery,
+  createExamQuery,
   getAllExamLogQuery,
   getAllQuestionDetailByExamLogID,
   getCorrectOptionIDByQuestionIDQuery,
@@ -9,14 +9,13 @@ import {
   getMaxExamIDQuery,
   getNotCompletedExamID,
   getOptionRangeQuery,
-  getQuestionDetailByExamLogIDAndQuestionIDQuery,
   getQuestionIDByExamLogIDQuery,
   getQuestionsRandomQuery,
   getSelectedOptionIDByQuestionIDQuery,
   updateExamScore,
   updateSelectOptionQuery,
 } from "../queries/examLogQueries.js";
-import { getExistUser, getUserDetail } from "../queries/authQueries.js";
+import { getUserDetail } from "../queries/authQueries.js";
 
 //-------------------
 // CREATE EXAM RANDOMLY
@@ -68,7 +67,108 @@ export const generateRandomExam = async (req, res) => {
       false,
     ]);
 
-    await pool.query(createExamByRandomQuery, [examEntries]);
+    await pool.query(createExamQuery, [examEntries]);
+
+    res.status(201).json({
+      success: true,
+      message: "Exam created success randomly",
+      exam_id: exam_id,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+//-------------------
+// CREATE EXAM CUSTOM
+//-------------------
+export const generateCustomExam = async (req, res) => {
+  const { user_id, skills } = req.body; // skills คือ array ของ object ที่มี skill_id และจำนวนข้อคำถาม
+
+  const schema = Joi.object({
+    user_id: Joi.number().integer().positive().required(),
+    skills: Joi.array()
+      .items(
+        Joi.object({
+          skill_id: Joi.number().integer().positive().required(),
+          question_count: Joi.number().integer().positive().required(),
+        })
+      )
+      .required(),
+  });
+
+  // Validate
+  const { error, value } = schema.validate(req.body, { abortEarly: false });
+
+  if (error) {
+    return res.status(400).json({
+      success: false,
+      error: "Validation Error",
+      details: error.details.map((err) => err.message),
+    });
+  }
+
+  const [existUser] = await pool.query(getUserDetail, [user_id]);
+
+  if (existUser.length === 0) {
+    return res.status(404).json({
+      error: "User not found",
+    });
+  }
+
+  try {
+    const [rows] = await pool.query(getMaxExamIDQuery);
+    const exam_id = (rows[0]?.max_exam_id || 0) + 1;
+
+    // สร้างคำถามจาก skills ที่ได้รับ
+    let questionsQuery = "";
+    let queryParams = [];
+
+    for (let skill of skills) {
+      const { skill_id, question_count } = skill;
+
+      // เพิ่มคำถามสำหรับแต่ละ skill_id
+      const queryPart = `
+        (SELECT question_id 
+         FROM question 
+         WHERE skill_id = ? AND is_available = TRUE 
+         ORDER BY RAND() 
+         LIMIT ?)
+      `;
+
+      questionsQuery += questionsQuery ? " UNION " + queryPart : queryPart;
+      queryParams.push(skill_id, question_count);
+    }
+
+    // ดึงคำถามที่ถูกสุ่มจากหลาย skill_id
+    const [questions] = await pool.query(questionsQuery, queryParams);
+
+    if (questions.length === 0) {
+      throw new Error("No question available");
+    }
+
+    const examEntries = questions.map((q) => [
+      exam_id,
+      q.question_id,
+      user_id,
+      null,
+      null,
+      false,
+    ]);
+
+    // Fisher-Yates Shuffle (สุ่มลำดับ array)
+    let shuffledExamEntries = [...examEntries];
+    for (let i = shuffledExamEntries.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffledExamEntries[i], shuffledExamEntries[j]] = [
+        shuffledExamEntries[j],
+        shuffledExamEntries[i],
+      ];
+    }
+
+    await pool.query(createExamQuery, [shuffledExamEntries]);
 
     res.status(201).json({
       success: true,
