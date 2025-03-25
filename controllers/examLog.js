@@ -320,8 +320,6 @@ export const checkAnswer = async (req, res) => {
     const correctCount = results.filter((r) => r.isCorrect).length;
     const totalQuestions = results.length;
 
-    // console.log(results);
-
     res.status(200).json({
       success: true,
       total: totalQuestions,
