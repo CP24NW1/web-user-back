@@ -25,7 +25,8 @@ export const getCorrectOptionIDByQuestionIDQuery = `SELECT o.option_id FROM choi
 
 export const updateExamScore = `UPDATE examtesting e SET e.is_correct = ?, e.finish_at = now() WHERE e.exam_id = ? AND e.question_id = ?`;
 
-export const getAllQuestionDetailByExamLogID = `SELECT e.exam_id, e.finish_at, q.question_id, s.skill_name, q.question_text, o.option_id, o.option_text, o.is_correct, e.selected_option_id
+export const getAllQuestionDetailByExamLogID = `
+SELECT e.exam_id, e.finish_at, q.question_id, s.skill_name, q.question_text, o.option_id, o.option_text, o.is_correct, e.selected_option_id
 FROM examtesting e 
 JOIN question q ON e.question_id = q.question_id
 JOIN skill s ON s.skill_id = q.skill_id

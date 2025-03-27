@@ -16,6 +16,7 @@ import {
   updateSelectOptionQuery,
 } from "../queries/examLogQueries.js";
 import { getUserDetail } from "../queries/authQueries.js";
+import { ExamDTO, QuestionDTO } from "../dtos/examLog.js";
 
 //-------------------
 // CREATE EXAM RANDOMLY
@@ -203,10 +204,18 @@ export const getAllExamLog = async (req, res) => {
       notCompleteExamID.map((exam) => exam.exam_id)
     );
 
-    const examsWithStatus = result.map((exam) => ({
-      ...exam,
-      is_completed: !notCompletedSet.has(exam.exam_id),
-    }));
+    const examsWithStatus = result.map((exam) => {
+      const is_completed = !notCompletedSet.has(exam.exam_id);
+      return new ExamDTO({
+        exam_id: exam.exam_id,
+        user_id: exam.user_id,
+        create_at: exam.create_at,
+        attempt_at: exam.attempt_at,
+        finish_at: exam.finish_at,
+        time_taken: exam.time_taken,
+        is_completed: is_completed,
+      });
+    });
 
     res.status(200).json({
       exams: examsWithStatus,
@@ -498,7 +507,10 @@ export const getExamTestedDetail = async (req, res) => {
       });
     });
 
-    const formatData = Array.from(questionsMap.values());
+    // const formatData = Array.from(questionsMap.values());
+    const formatData = Array.from(questionsMap.values()).map(
+      (item) => new QuestionDTO(item)
+    );
 
     const isCompleted = !formatData.some((data) => data.finish_at === null);
 

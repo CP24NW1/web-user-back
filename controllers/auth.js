@@ -12,6 +12,7 @@ import {
   generateVerificationCode,
   sendVerificationEmail,
 } from "../utils/emailUtils.js";
+import { UserDTO } from "../dtos/auth.js";
 
 const accessSecret = process.env.JWT_ACCESS_SECRET;
 const refreshSecret = process.env.JWT_REFRESH_SECRET;
@@ -231,6 +232,8 @@ export const fetchMe = async (req, res) => {
   try {
     const [user] = await pool.query(getUserDetail, [user_id]);
 
+    const userDetails = new UserDTO(user[0]);
+
     if (user.length === 0) {
       return res.status(404).json({
         success: false,
@@ -240,7 +243,7 @@ export const fetchMe = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      user: user,
+      user: userDetails,
     });
   } catch (error) {
     console.error(error);
