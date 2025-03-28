@@ -13,7 +13,9 @@ JOIN
     question q ON e.question_id = q.question_id 
 JOIN 
     skill s ON q.skill_id = s.skill_id 
-WHERE e.user_id = ?
+WHERE 
+    e.user_id = ? 
+    AND e.finish_at IS NOT NULL 
 GROUP BY 
     e.exam_id, s.skill_name
 ORDER BY 
@@ -22,11 +24,11 @@ ORDER BY
 
 export const examTestedSummarizeAllQuery = `
 SELECT 
-	e.exam_id,
+    e.exam_id,
     CONCAT('Test ', e.exam_id) AS test,
     SUM(e.is_correct) AS score,
     COUNT(*) AS total,
-	CONCAT(ROUND((SUM(e.is_correct) * 100) / COUNT(*), 2), '%') AS percentage,
+    CONCAT(ROUND((SUM(e.is_correct) * 100) / COUNT(*), 2), '%') AS percentage,
     MAX(e.finish_at) AS submitted_date
 FROM 
     examtesting e
@@ -34,7 +36,9 @@ JOIN
     question q ON e.question_id = q.question_id 
 JOIN 
     skill s ON q.skill_id = s.skill_id
-WHERE e.user_id = ?
+WHERE 
+    e.user_id = ? 
+    AND e.finish_at IS NOT NULL 
 GROUP BY 
     e.exam_id
 ORDER BY 
@@ -42,13 +46,14 @@ ORDER BY
 
 export const generalStatsQuery = `
 SELECT 
-COUNT(DISTINCT(e.exam_id)) AS total_exam_tested, 
-COUNT(e.question_id) AS total_questions, 
-CAST(SUM(e.is_correct) AS UNSIGNED) AS score,
-COUNT(*) AS total,
-ROUND((SUM(e.is_correct) * 100) / COUNT(*), 2) AS average_score 
+    COUNT(DISTINCT e.exam_id) AS total_exam_tested, 
+    COUNT(e.question_id) AS total_questions, 
+    CAST(SUM(e.is_correct) AS UNSIGNED) AS score,
+    COUNT(*) AS total,
+    ROUND((SUM(e.is_correct) * 100) / COUNT(*), 2) AS average_score 
 FROM examtesting e
-WHERE e.user_id = ?`;
+WHERE e.user_id = ?
+AND e.finish_at IS NOT NULL;`;
 
 export const barChartDataQuery = `
 SELECT

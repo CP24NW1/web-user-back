@@ -30,6 +30,7 @@ export const getExamTestedSummarize = async (req, res) => {
       [summary] = await pool.query(examTestedSummarizeBySkillQuery, [user_id]);
     }
 
+    console.log(summary);
     const formattedSummary = summary.map((item) => new ExamSummaryDTO(item));
 
     res.status(200).json({

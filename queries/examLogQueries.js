@@ -1,10 +1,10 @@
 export const getMaxExamIDQuery = `SELECT MAX(exam_id) AS max_exam_id FROM examtesting`;
 
-export const getQuestionsRandomQuery = `SELECT question_id FROM question WHERE is_available = TRUE ORDER BY RAND() LIMIT 20`;
+export const getQuestionsRandomQuery = `SELECT question_id FROM question WHERE is_available = TRUE ORDER BY RAND() LIMIT ?`;
 
 export const createExamQuery = `INSERT INTO examtesting (exam_id, question_id, user_id, attempt_at, time_taken, is_correct) VALUES ?`;
 
-export const getAllExamLogQuery = `SELECT DISTINCT exam_id, user_id, create_at, attempt_at, MAX(finish_at) AS finish_at, time_taken FROM examtesting WHERE user_id = ? GROUP BY exam_id, user_id, create_at, attempt_at, time_taken`;
+export const getAllExamLogQuery = `SELECT exam_id, user_id, create_at, attempt_at, MAX(finish_at) AS finish_at, time_taken, SUM(CASE WHEN is_correct = 1 THEN 1 ELSE 0 END) AS score,  COUNT(question_id) AS total FROM examtesting WHERE user_id = ? GROUP BY exam_id, user_id, create_at, attempt_at, time_taken`;
 
 export const getQuestionIDByExamLogIDQuery = `SELECT DISTINCT e.question_id FROM examtesting e JOIN question q on e.question_id = q.question_id WHERE exam_id = ?`;
 

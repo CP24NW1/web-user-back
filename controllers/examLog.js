@@ -17,16 +17,21 @@ import {
 } from "../queries/examLogQueries.js";
 import { getUserDetail } from "../queries/authQueries.js";
 import { ExamDTO, QuestionDTO } from "../dtos/examLog.js";
+import axios from "axios";
+
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 
 //-------------------
 // CREATE EXAM RANDOMLY
 //-------------------
 
 export const generateRandomExam = async (req, res) => {
-  const { user_id } = req.body;
+  const { user_id, question_count } = req.body;
 
   const schema = Joi.object({
     user_id: Joi.number().integer().positive().required(),
+    question_count: Joi.number().integer().positive().required(),
   });
 
   // Validate
@@ -53,7 +58,9 @@ export const generateRandomExam = async (req, res) => {
 
     const exam_id = (rows[0]?.max_exam_id || 0) + 1;
 
-    const [questions] = await pool.query(getQuestionsRandomQuery);
+    const [questions] = await pool.query(getQuestionsRandomQuery, [
+      question_count,
+    ]);
 
     if (questions.length === 0) {
       throw new Error("No question available");
@@ -214,6 +221,8 @@ export const getAllExamLog = async (req, res) => {
         finish_at: exam.finish_at,
         time_taken: exam.time_taken,
         is_completed: is_completed,
+        score: exam.score,
+        total: exam.total,
       });
     });
 
@@ -526,5 +535,52 @@ export const getExamTestedDetail = async (req, res) => {
   } catch (error) {
     console.log(error);
     res.status(500).json({ error: error.message });
+  }
+};
+
+export const explanationAI = async (req, res) => {
+  try {
+    const { question, choices } = req.body;
+
+    console.log(req.body);
+
+    if (!question || !Array.isArray(choices) || choices.length === 0) {
+      return res.status(400).json({ error: "Invalid request format" });
+    }
+
+    const formattedPrompt = `Question: ${question}\nChoices: ${choices.join(
+      ", "
+    )}\nExplain why the correct answer is the best choice.`;
+
+    const response = await axios.post(
+      `${OPENROUTER_BASE_URL}/chat/completions`,
+      {
+        model: "deepseek/deepseek-r1:free",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are a helpful AI assistant that answers english questions based on given choices and explains the correct answer with not format text.",
+          },
+          { role: "user", content: formattedPrompt },
+        ],
+        extra_body: {},
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "<YOUR_SITE_URL>",
+          "X-Title": "<YOUR_SITE_NAME>",
+        },
+      }
+    );
+
+    res.json({
+      message: response.data.choices[0].message.content,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to fetch AI response" });
   }
 };

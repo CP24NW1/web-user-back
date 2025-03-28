@@ -1,6 +1,7 @@
 import express from "express";
 import {
   checkAnswer,
+  explanationAI,
   generateCustomExam,
   generateRandomExam,
   getAllExamLog,
@@ -21,5 +22,6 @@ router.put("/select/", auth, updateSelectOption);
 router.put("/:exam_id/submit", auth, checkAnswer);
 router.get("/:exam_id/count", auth, getCountQuestionByExamID);
 router.get("/:exam_id/detail", auth, getExamTestedDetail);
+router.post("/chat", explanationAI)
 
 export default router;

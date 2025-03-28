@@ -7,6 +7,8 @@ export class ExamDTO {
       this.finish_at = data.finish_at;
       this.time_taken = data.time_taken;
       this.is_completed = data.is_completed;
+      this.score = data.score;
+      this.total = data.total;
     }
 }
 
