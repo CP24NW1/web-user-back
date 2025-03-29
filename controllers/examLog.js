@@ -542,15 +542,16 @@ export const explanationAI = async (req, res) => {
   try {
     const { question, choices } = req.body;
 
-    console.log(req.body);
-
     if (!question || !Array.isArray(choices) || choices.length === 0) {
       return res.status(400).json({ error: "Invalid request format" });
     }
+    const formattedPrompt = `Question: ${question}\nChoices: ${choices
+      .map((choice) => choice.option)
+      .join(", ")}\nThe correct answer is: ${
+      choices.find((choice) => choice.is_correct === 1).option
+    }. Explain briefly why this answer is correct.`;
 
-    const formattedPrompt = `Question: ${question}\nChoices: ${choices.join(
-      ", "
-    )}\nExplain why the correct answer is the best choice.`;
+    console.log(formattedPrompt);
 
     const response = await axios.post(
       `${OPENROUTER_BASE_URL}/chat/completions`,
@@ -559,10 +560,71 @@ export const explanationAI = async (req, res) => {
         messages: [
           {
             role: "system",
-            content:
-              "You are a helpful AI assistant that answers english questions based on given choices and explains the correct answer with not format text.",
+            content: `You are an AI assistant that answers multiple-choice English questions. Follow these steps:
+                      1. You will receive a question, answer choices, and the correct answer.
+                      2. State which option is correct by saying "The correct answer is: [Answer]."
+                      3. Then, explain briefly why the correct answer is the best choice (within 50 words).
+                      4. Do not mention or evaluate other choices.
+                      5. Do not use formatting (such as bold or bullet points).
+                    `,
           },
           { role: "user", content: formattedPrompt },
+        ],
+        extra_body: {},
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "<YOUR_SITE_URL>",
+          "X-Title": "<YOUR_SITE_NAME>",
+        },
+      }
+    );
+
+    res.json({
+      message: response.data.choices[0].message.content,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to fetch AI response" });
+  }
+};
+
+export const suggestionAI = async (req, res) => {
+  try {
+    const { data } = req.body;
+
+    // สร้าง formattedData ใหม่จากข้อมูลใน req.body
+    const formattedData = data.map((item) => {
+      const incorrectAnswer = item.selected_option !== item.correct_option;
+
+      return {
+        question: item.question,
+        skill: item.skill,
+        selected_option: item.selected_option,
+        correct_option: item.correct_option,
+        options: item.options,
+        result: incorrectAnswer ? "Incorrect" : "Correct",
+      };
+    });
+
+    const response = await axios.post(
+      `${OPENROUTER_BASE_URL}/chat/completions`,
+      {
+        model: "deepseek/deepseek-r1:free",
+        messages: [
+          {
+            role: "system",
+            content: `You are an AI assistant that analyzes multiple-choice English questions and identifies areas for improvement. Follow these steps:
+1. You will receive a series of questions, answers, and correct answers along with the skill assessed.
+2. If the user selects the wrong answer, identify the specific topic or concept from the skill that needs improvement.
+3. List the areas to study based on the user's mistakes, including topics or concepts related to the skill assessed.
+4. Do not evaluate the incorrect choices. Focus on identifying the area of study for improvement.
+5. Do not use formatting (such as bold or bullet points).
+              `,
+          },
+          { role: "user", content: formattedData },
         ],
         extra_body: {},
       },

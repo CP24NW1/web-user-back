@@ -7,6 +7,7 @@ import {
   getAllExamLog,
   getCountQuestionByExamID,
   getExamTestedDetail,
+  suggestionAI,
   updateSelectOption,
 } from "../controllers/examLog.js";
 
@@ -23,5 +24,6 @@ router.put("/:exam_id/submit", auth, checkAnswer);
 router.get("/:exam_id/count", auth, getCountQuestionByExamID);
 router.get("/:exam_id/detail", auth, getExamTestedDetail);
 router.post("/chat", explanationAI)
+router.post("/chat/suggest", suggestionAI)
 
 export default router;
