@@ -6,5 +6,6 @@ export class UserDTO {
       this.email = data.email;
       this.create_at = data.create_at;
       this.update_at = data.update_at;
+      this.DOB = data.DOB
     }
 }
