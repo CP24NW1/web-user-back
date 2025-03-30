@@ -538,6 +538,10 @@ export const getExamTestedDetail = async (req, res) => {
   }
 };
 
+//-------------------
+// EXPLANATION AI
+//-------------------
+
 export const explanationAI = async (req, res) => {
   try {
     const { question, choices } = req.body;
@@ -546,12 +550,10 @@ export const explanationAI = async (req, res) => {
       return res.status(400).json({ error: "Invalid request format" });
     }
     const formattedPrompt = `Question: ${question}\nChoices: ${choices
-      .map((choice) => choice.option)
+      .map((choice) => choice?.option)
       .join(", ")}\nThe correct answer is: ${
-      choices.find((choice) => choice.is_correct === 1).option
+      choices.find((choice) => choice?.is_correct === 1)?.option
     }. Explain briefly why this answer is correct.`;
-
-    console.log(formattedPrompt);
 
     const response = await axios.post(
       `${OPENROUTER_BASE_URL}/chat/completions`,
@@ -566,7 +568,7 @@ export const explanationAI = async (req, res) => {
                       3. Then, explain briefly why the correct answer is the best choice (within 50 words).
                       4. Do not mention or evaluate other choices.
                       5. Do not use formatting (such as bold or bullet points).
-                    `,
+                      `,
           },
           { role: "user", content: formattedPrompt },
         ],
@@ -591,23 +593,22 @@ export const explanationAI = async (req, res) => {
   }
 };
 
+//-------------------
+// SUGGESTION AI
+//-------------------
+
 export const suggestionAI = async (req, res) => {
   try {
-    const { data } = req.body;
+    const { question, choices } = req.body;
 
-    // สร้าง formattedData ใหม่จากข้อมูลใน req.body
-    const formattedData = data.map((item) => {
-      const incorrectAnswer = item.selected_option !== item.correct_option;
-
-      return {
-        question: item.question,
-        skill: item.skill,
-        selected_option: item.selected_option,
-        correct_option: item.correct_option,
-        options: item.options,
-        result: incorrectAnswer ? "Incorrect" : "Correct",
-      };
-    });
+    if (!question || !Array.isArray(choices) || choices.length === 0) {
+      return res.status(400).json({ error: "Invalid request format" });
+    }
+    const formattedPrompt = `Question: ${question}\nChoices: ${choices
+      .map((choice) => choice?.option)
+      .join(", ")}\nThe correct answer is: ${
+      choices.find((choice) => choice?.is_correct === 1)?.option
+    }. Explain briefly why this answer is correct.`;
 
     const response = await axios.post(
       `${OPENROUTER_BASE_URL}/chat/completions`,
@@ -617,14 +618,13 @@ export const suggestionAI = async (req, res) => {
           {
             role: "system",
             content: `You are an AI assistant that analyzes multiple-choice English questions and identifies areas for improvement. Follow these steps:
-1. You will receive a series of questions, answers, and correct answers along with the skill assessed.
-2. If the user selects the wrong answer, identify the specific topic or concept from the skill that needs improvement.
-3. List the areas to study based on the user's mistakes, including topics or concepts related to the skill assessed.
-4. Do not evaluate the incorrect choices. Focus on identifying the area of study for improvement.
-5. Do not use formatting (such as bold or bullet points).
-              `,
+                      1. You will receive a question, answer choices, and the correct answer.
+                      2. State which English language skill this question is testing.
+                      3. Do not evaluate the answer choices.
+                      4. Do not use formatting (such as bold or bullet points).
+                      `,
           },
-          { role: "user", content: formattedData },
+          { role: "user", content: formattedPrompt },
         ],
         extra_body: {},
       },
